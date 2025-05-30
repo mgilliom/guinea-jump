@@ -1,0 +1,335 @@
+ <!DOCTYPE html>
+
+<head>
+  <title>Pyramid</title>
+  <script src="three.min.js"></script>
+  <script src="KeyboardState.js"></script>
+  <script src="GLTFLoader.js"></script>
+
+  <!-- 
+  Author:  Maya Gilliom
+  Date: 10/30/23
+  
+  -->
+
+  <script>
+    var gameLength = 1; //increase to play longer!
+
+
+       
+    var zoomedOut = false, addcyl = true;
+    var scene, camera, renderer, canvas;
+    var cube, cube2, pig;
+    var cubebox, cubebox2, pigbox;
+    var iscol = 0; //iscol == 0 then no collision.
+    var listObj = [], listBox = [];
+    var r = 100; //radius of ground cylinder
+    var c = 0, theta2 = 0, theta2step = .01; //counter and theta for guinea pig animations. step is how much it rotates
+    var spinBody;
+    var jumpCount = 0;
+    var pigpos = 101;
+    var body, guineapig, guineahead, guineabody, guinealegs, guineaarms, strawb, guineabutt;
+    var loader = new THREE.GLTFLoader();
+    var l = 10, n = 50, theta = .002; //min dist bw obstc,  //num obstacles, speed that cyl spins; 
+    var id; //so i can cancel the animation when you lose
+    var yrlevel = 1; //game length should be 3
+
+
+    function createWorld() {
+
+      renderer.setClearColor(0xc864ed); scene = new THREE.Scene();
+
+      //Pcam( fov, aspect ratio, near z, far z)
+      camera = new THREE.PerspectiveCamera(70, canvas.width / canvas.height, 1, 1000);
+      camera.position.y = 115; //how high up 105
+      camera.position.z = 8; //how far back 10
+      camera.rotation.x = -Math.PI / 6;
+      
+
+      if (zoomedOut) {
+        camera.position.z = 150;
+      }
+
+
+      var light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(0, 150, 100);
+      scene.add(light);
+      var aLight = new THREE.AmbientLight(0xffffff, .5);
+      scene.add(aLight);
+
+
+      spinBody = new THREE.Object3D();
+      scene.add(spinBody)
+      spinBody.rotation.z = Math.PI / 2;
+
+      const geometry = new THREE.CylinderGeometry(r, r, 150, 100);;
+      const material = new THREE.MeshLambertMaterial({color: 0xffff00});
+      cyl = new THREE.Mesh(geometry, material);
+      if (addcyl) {
+        spinBody.add(cyl);
+      }
+
+
+
+      loader.load('guineahead.glb',
+        function (gltf) {
+          guineahead = gltf.scene;
+          upper.add(guineahead);
+        }
+      );
+      loader.load('guineabody.glb',
+        function (gltf) {
+          guineabody = gltf.scene;
+          lower.add(guineabody);
+          guineabody.position.y = .2
+          guineabody.position.x = -.2
+        }
+      );
+      loader.load('guineaarms.glb',
+        function (gltf) {
+          guineaarms = gltf.scene;
+          upper.add(guineaarms);
+        }
+      );
+      loader.load('guinealegs.glb',
+        function (gltf) {
+          guinealegs = gltf.scene;
+          lower.add(guinealegs);
+        }
+      );
+
+
+      upper = new THREE.Object3D();
+      lower = new THREE.Object3D();
+      body = new THREE.Object3D();
+
+      scene.add(body);
+      body.position.y = 101;
+      body.add(upper);
+      body.add(lower);
+      body.rotation.y = Math.PI / 2
+
+      guinbox = new THREE.Box3();
+      guinbox.setFromObject(body);
+
+
+
+      obstacles(n);
+      strawberry();
+    }
+    
+    function strawberry() {
+      strawbBody = new THREE.Object3D();
+      scene.add(strawbBody);
+      
+      loader.load('strawb1.glb',
+        function (gltf) {  
+          strawb = gltf.scene;
+          //strawb.rotation.y = 4.5;
+          strawbBody.add(strawb);});
+
+
+
+      strawbBody.position.y = 114;
+      strawbBody.position.z = -1;
+      strawbBody.position.x = -8
+      strawbBody.rotation.x = -Math.PI / 6;
+    }
+
+      function loadStrawbs(yrlevel){
+
+        // if(yrlevel == 2){
+        //   loader.load('strawb2.glb',
+        //   function (gltf) {  
+        //     strawb2 = gltf.scene;
+        //     strawb2.rotation.y = 4.4;
+        //     strawb2.position.x = 3
+        //     strawbBody.add(strawb2);});
+        //     return yrlevel = 2.1;
+        // }
+        
+       
+        // else if(yrlevel == 3 ){
+        //   loader.load('strawb3.glb',
+        //   function (gltf) {  
+        //     strawb3 = gltf.scene;
+        //     strawb3.rotation.y = 4.1;
+        //     strawb3.position.x = 6
+        //     strawbBody.add(strawb3);});
+        //     return yrlevel = 3.1;
+        // }
+        // else if(yrlevel == 4){
+        //   localStorage.setItem('level', level);
+        //   window.location.href = 'win.html';
+         
+
+        // }
+        
+      }
+      
+     
+
+    function obstacles(n) {
+      var h = r + .5;
+      for (let i = 0; i < n; i++) {
+        const geometry2 = new THREE.BoxGeometry(1, 5, 1);
+        const material2 = new THREE.MeshBasicMaterial({color: 0x00ff00});
+        obstc = new THREE.Mesh(geometry2, material2);
+        spinBody.add(obstc);
+
+        var x = Math.floor(Math.random()*2*Math.PI*r/l); //choose number bw 0 and the max numb of obstacles we could have spaced out evenly to have room to jump in time (157)
+        var th = 2*Math.PI*(x/(2*Math.PI*r/l)) //th is which spot of the 157 above this obstacle gets. I know this seems a bit redundant but i think it's clearer this way
+      
+        obstc.position.z = Math.cos(th)*h;
+        obstc.position.x = Math.sin(th)*h;
+        
+
+        listObj.push(obstc)
+
+        obstcbox = new THREE.Box3();
+        obstcbox.setFromObject(obstc);
+        listBox.push(obstcbox)
+      }
+    }
+
+
+    function check() {
+      iscol = 0;
+      for (let i = 0; i < n; i++) {
+        if (listBox[i].intersectsBox(guinbox) && spinBody.rotation.x > .3) {
+          iscol = 1;
+          
+          cancelAnimationFrame(id);
+          window.location.href = 'lose.html';
+          
+        }
+      }
+    }
+
+    function move() {
+      var keyboard = new KeyboardState();
+      keyboard.update();
+
+      const jumpSteps = 50;
+      const maxHeight = 6;
+
+      guinbox.setFromCenterAndSize(body.position, new THREE.Vector3(1,1,1));
+
+      if (jumpCount > 0) { //go up and then down
+        jumpCount--;
+        body.position.y = maxHeight * (0.25 - (jumpCount / jumpSteps - 0.5) ** 2) + pigpos;
+      }
+      else { //no jump but watch for one
+        body.position.y = pigpos;
+        if (keyboard.pressed('space')) {
+          jumpCount = jumpSteps;
+          console.log("Jump");
+        }
+      }
+
+    }
+
+    function level(){
+      if (spinBody.rotation.x < gameLength){
+        yrlevel = 1;
+        console.log('LEVEL 1')
+      }
+      else if(spinBody.rotation.x < 2*gameLength){
+        yrlevel = 2;
+        console.log('LEVEL 2')
+        //yrlevel = loadStrawbs(yrlevel)
+        theta = .0022;
+      }
+      else if(spinBody.rotation.x < 3*gameLength){
+        yrlevel = 3;
+        loadStrawbs(yrlevel)
+        console.log('LEVEL 3')
+        //yrlevel = loadStrawbs(yrlevel)
+        theta = .0024;
+      }
+      else {
+        yrlevel = 4;
+        loadStrawbs(yrlevel);
+         
+        
+      }
+    }
+
+
+
+    function render() {
+      renderer.render(scene, camera);
+      id = requestAnimationFrame(render);
+      move();
+      check();
+      level();
+      spinBody.rotation.x += theta;
+      
+
+
+      if (c < 50) {
+        theta2 += theta2step;
+        c += 1;
+      }
+      else if (c < 100) {
+        theta2 -= theta2step;
+        c += 1;
+      }
+      else {
+        c = 0;
+      }
+      upper.rotation.z = theta2;
+      lower.rotation.z = -1 * theta2
+
+
+      for (let i = 0; i < n; i++) {
+        listBox[i].setFromObject(listObj[i]);
+      }
+
+    }
+
+
+
+
+
+
+
+
+
+
+    // The init() function is called by the onload event when the document has loaded.
+    function init() {
+      try {
+        canvas = document.getElementById("glcanvas");
+        renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
+      }
+      catch (e) {
+        document.getElementById("canvas-holder").innerHTML = "<h3><b>WebGL is not available.</b><h3>";
+        return;
+      }
+
+      // create world and render scene
+      createWorld();
+      render();
+    }
+
+  </script>
+
+</head>
+
+<body onload="init()">
+
+  <div id="canvas-holder">
+    <canvas id="glcanvas" width="600" height="300"></canvas>
+  </div>
+
+</body>
+
+</html>
+
+
+<!-- controls = new FlyControls( camera, renderer.domElement );
+controls.movementSpeed = 100;
+controls.rollSpeed = Math.PI / 24;
+controls.autoForward = false;
+controls.dragToLook = true; -->

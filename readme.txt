@@ -1,0 +1,3 @@
+Use your space bar to help your guinea pig jump over the obstacles! There are three levels, and the guinea pig runs faster and faster as you go up the levels. If you pass the third level, you win! If the game is too easy, you can increase the gameLength variable in the code to play longer :)
+
+At first I was loading Blender objects that tell you which level you're on, but it was causing a lag, so now levels are displayed in the console. I also tried adding a shadow under the guinea pig as per your suggestion, but this also caused more of a lag. 
